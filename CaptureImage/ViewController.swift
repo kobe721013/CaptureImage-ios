@@ -12,6 +12,8 @@ class ViewController: UIViewController,UITextFieldDelegate {
 
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var ipTextField: UITextField!
+    
+    let waitingDialog = UIAlertController(title: "Capture", message: "Please wait...", preferredStyle: .alert)
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
@@ -35,11 +37,18 @@ class ViewController: UIViewController,UITextFieldDelegate {
     }
     
     func showAlertDialog(titleMsg titlemsg:String, bodyMsg bodymsg:String){
+        waitingDialog.dismiss(animated: false, completion: nil)
         let ac = UIAlertController(title: titlemsg, message: bodymsg, preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
     }
     
+    func showCapturingDialog(){
+        
+        present(waitingDialog, animated: true)
+        
+        
+    }
     @IBAction func captureClick(_ sender: UIButton) {
         
         //let url = URL(string: "http://az616578.vo.msecnd.net/files/2016/05/02/635977562108560005-679443365_kobe.jpg")
@@ -62,6 +71,29 @@ class ViewController: UIViewController,UITextFieldDelegate {
         }
         
         //get image data
+        DispatchQueue.global().async {
+            let url = URL(string: "http://\(ipaddress):8080/reqimg")
+            DispatchQueue.main.async {
+                self.showCapturingDialog()
+            }
+            guard let imageData = NSData(contentsOf: url!) else {
+                print("error1: imageData is nil")
+                DispatchQueue.main.async {
+                    self.showAlertDialog(titleMsg: "Capture error", bodyMsg: "Please check server or network")
+                }
+                
+                return
+                
+            }
+            
+            DispatchQueue.main.async {
+                //show image
+                self.imageView.contentMode = .scaleAspectFit
+                self.imageView.image = UIImage(data: (imageData as NSData) as Data)
+            }
+        }
+        
+        /*
         let url = URL(string: "http://\(ipaddress):8080/reqimg")
         guard let imageData = NSData(contentsOf: url!) else {
             print("error1: imageData is nil")
@@ -69,10 +101,11 @@ class ViewController: UIViewController,UITextFieldDelegate {
             return
             
         }
-        
+ 
         //show image
         imageView.contentMode = .scaleAspectFit
         imageView.image = UIImage(data: (imageData as NSData) as Data)
+ */
     }
     
     
@@ -80,6 +113,7 @@ class ViewController: UIViewController,UITextFieldDelegate {
         
         guard let saveImage = imageView.image else {
             print("get image view fail. data is nil")
+            showAlertDialog(titleMsg: "Save error", bodyMsg: "No image to save.")
             return
         }
         
