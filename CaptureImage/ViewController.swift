@@ -12,8 +12,8 @@ class ViewController: UIViewController,UITextFieldDelegate {
 
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var ipTextField: UITextField!
-    
     let waitingDialog = UIAlertController(title: "Capture", message: "Please wait...", preferredStyle: .alert)
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
@@ -27,35 +27,40 @@ class ViewController: UIViewController,UITextFieldDelegate {
     }
 
 
-
+    //for dismiss keypad ===== start
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
     }
     
+    
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         return true
     }
+    //for dismiss keypad ===== end
     
     func showAlertDialog(titleMsg titlemsg:String, bodyMsg bodymsg:String){
-        waitingDialog.dismiss(animated: false, completion: nil)
+        //dismiis waiting dialog
+        showCapturingDialog(yesIWantToShow: false)
+        
+        //show alert dialog
         let ac = UIAlertController(title: titlemsg, message: bodymsg, preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
     }
     
-    func showCapturingDialog(){
-        
-        present(waitingDialog, animated: true)
-        
+    func showCapturingDialog(yesIWantToShow yes:Bool)
+    {
+        if(yes == true)
+        {
+            present(waitingDialog, animated: true)
+        }
+        else
+        {
+            waitingDialog.dismiss(animated: false, completion: nil)
+        }
         
     }
     @IBAction func captureClick(_ sender: UIButton) {
-        
-        //let url = URL(string: "http://az616578.vo.msecnd.net/files/2016/05/02/635977562108560005-679443365_kobe.jpg")
-        
-       //print("isValidIP1=\(isValidEIPAddress(testStr: "67.89.90.888"))")
-        
-        //print("isValidIP2=\(isValidEIPAddress(testStr: "67.89.9088.99"))")
         
         //check text not nil
         guard let ipaddress = ipTextField.text else{
@@ -69,45 +74,80 @@ class ViewController: UIViewController,UITextFieldDelegate {
             showAlertDialog(titleMsg: "IP address error", bodyMsg: "Please check ip address format.")
             return
         }
+        //clear image
+        imageView.image=nil
         
-        //get image data
-        DispatchQueue.global().async {
-            let url = URL(string: "http://\(ipaddress):8080/reqimg")
-            DispatchQueue.main.async {
-                self.showCapturingDialog()
-            }
-            guard let imageData = NSData(contentsOf: url!) else {
-                print("error1: imageData is nil")
-                DispatchQueue.main.async {
-                    self.showAlertDialog(titleMsg: "Capture error", bodyMsg: "Please check server or network")
-                }
-                
-                return
-                
-            }
-            
-            DispatchQueue.main.async {
-                //show image
-                self.imageView.contentMode = .scaleAspectFit
-                self.imageView.image = UIImage(data: (imageData as NSData) as Data)
-            }
-        }
-        
-        /*
+        //async download image
+        showCapturingDialog(yesIWantToShow: true)
         let url = URL(string: "http://\(ipaddress):8080/reqimg")
-        guard let imageData = NSData(contentsOf: url!) else {
-            print("error1: imageData is nil")
-            showAlertDialog(titleMsg: "Capture error", bodyMsg: "Please check server or network")
-            return
-            
-        }
- 
-        //show image
-        imageView.contentMode = .scaleAspectFit
-        imageView.image = UIImage(data: (imageData as NSData) as Data)
- */
+        downloadImageFrom(url:url!)
     }
-    
+    /*
+     //get image data
+     DispatchQueue.global().async {
+     let url = URL(string: "http://\(ipaddress):8080/reqimg")
+     DispatchQueue.main.async {
+     self.showCapturingDialog()
+     }
+     guard let imageData = NSData(contentsOf: url!) else {
+     print("error1: imageData is nil")
+     DispatchQueue.main.async {
+     self.showAlertDialog(titleMsg: "Capture error", bodyMsg: "Please check server or network")
+     }
+     
+     return
+     
+     }
+     
+     DispatchQueue.main.async {
+     //show image
+     self.imageView.contentMode = .scaleAspectFit
+     self.imageView.image = UIImage(data: (imageData as NSData) as Data)
+     }
+     }
+     */
+    func downloadImageFrom(url:URL) -> Void {
+        
+        let urlConfig = URLSessionConfiguration.default
+        urlConfig.timeoutIntervalForRequest = 5
+        urlConfig.timeoutIntervalForResource = 5
+
+        let session = URLSession(configuration: urlConfig)
+        let task = session.dataTask(with: url, completionHandler: {(data, response, error) in
+        
+            if let e = error{
+                print("error1 : \(e)")
+                DispatchQueue.main.async {
+                    self.showAlertDialog(titleMsg: "Capture error", bodyMsg: e.localizedDescription)
+                }
+            }
+            else{
+                if let res = response as? HTTPURLResponse{
+                    print("responseCode=\(res.statusCode)")
+                    if let imageData = data{
+                        let image = UIImage(data: imageData)
+                        DispatchQueue.main.async {
+                            self.imageView.contentMode = .scaleAspectFit
+                            self.imageView.image = image
+                            self.showCapturingDialog(yesIWantToShow: false)
+                        }
+                    }else{
+                        print("error2")
+                        DispatchQueue.main.async {
+                            self.showAlertDialog(titleMsg: "Capture error", bodyMsg: "image data is nil. http code is: \(res.statusCode)")
+                        }                    }
+                
+                }else{
+                    print("error3")
+                    DispatchQueue.main.async {
+                        self.showAlertDialog(titleMsg: "Capture error", bodyMsg: "no response.")
+                    }                }
+            }
+            
+        })
+        
+        task.resume()
+    }
     
     @IBAction func saveClick(_ sender: UIButton) {
         
@@ -120,6 +160,7 @@ class ViewController: UIViewController,UITextFieldDelegate {
         UIImageWriteToSavedPhotosAlbum(saveImage, self, #selector(image(_:didFinishSavingWithError:contextInfo:)), nil)
     }
     
+    //callback for save image
     func image(_ image: UIImage, didFinishSavingWithError error: NSError?, contextInfo: UnsafeRawPointer) {
         if let error = error {
             // we got back an error!
@@ -132,15 +173,8 @@ class ViewController: UIViewController,UITextFieldDelegate {
         }
     }
     
-    func isValidEmail(testStr:String) -> Bool {
-        // print("validate calendar: \(testStr)")
-        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-        
-        let emailTest = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
-        return emailTest.evaluate(with: testStr)
-    }
-    //"^\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3})?)?)?)?)?)?"
-    
+   
+    //check ip address format
     func isValidEIPAddress(testStr:String) -> Bool {
         // print("validate calendar: \(testStr)")
         let ipRegEx = "^\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3})?)?)?)?)?)?"
