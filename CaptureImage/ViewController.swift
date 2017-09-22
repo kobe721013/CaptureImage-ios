@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Photos
 
 class ViewController: UIViewController,UITextFieldDelegate {
 
@@ -19,6 +20,15 @@ class ViewController: UIViewController,UITextFieldDelegate {
         // Do any additional setup after loading the view, typically from a nib.
         
         self.ipTextField.delegate = self
+        
+        //permission
+        if PHPhotoLibrary.authorizationStatus() == .authorized{
+            print("photo permission already authorized")
+        }else{
+            PHPhotoLibrary.requestAuthorization({ (status) in
+                print("status=\(status)")
+            })
+        }
     }
 
     override func didReceiveMemoryWarning() {
