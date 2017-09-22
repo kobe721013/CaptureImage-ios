@@ -13,7 +13,7 @@ class ViewController: UIViewController,UITextFieldDelegate {
 
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var ipTextField: UITextField!
-    let waitingDialog = UIAlertController(title: "Capture", message: "Please wait...", preferredStyle: .alert)
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -49,29 +49,43 @@ class ViewController: UIViewController,UITextFieldDelegate {
     //for dismiss keypad ===== end
     
     func showAlertDialog(titleMsg titlemsg:String, bodyMsg bodymsg:String){
-        //dismiis waiting dialog
-        showCapturingDialog(yesIWantToShow: false)
-        
-        //show alert dialog
-        let ac = UIAlertController(title: titlemsg, message: bodymsg, preferredStyle: .alert)
-        ac.addAction(UIAlertAction(title: "OK", style: .default))
-        present(ac, animated: true)
-    }
-    
-    func showCapturingDialog(yesIWantToShow yes:Bool)
-    {
-        if(yes == true)
+        //dismiss waiting dialog
+        print("any ViewController present=[\(self.presentedViewController)]")
+        if(self.presentedViewController != nil)
         {
-            present(waitingDialog, animated: true)
+        
+            dismiss(animated: false, completion: {() in
+                //self.showAlertDialog(titleMsg: titlemsg, bodyMsg: bodymsg)
+                //show alert dialog
+                self.presentAlertController(titleMsg: titlemsg, bodyMsg: bodymsg)
+            })
         }
         else
         {
-            waitingDialog.dismiss(animated: false, completion: nil)
+            self.presentAlertController(titleMsg: titlemsg, bodyMsg: bodymsg)
         }
         
     }
+    
+    func presentAlertController(titleMsg titlemsg:String, bodyMsg bodymsg:String)
+    {
+        let ac = UIAlertController(title: titlemsg, message: bodymsg, preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "OK", style: .default))
+        self.present(ac, animated: true)
+    }
+    
+    func presentWaiting4CaptureController()
+    {
+        let waitingDialog = UIAlertController(title: "Capture", message: "Please wait...", preferredStyle: .alert)
+        //let ac = UIAlertController(title: titlemsg, message: bodymsg, preferredStyle: .alert)
+        //ac.addAction(UIAlertAction(title: "OK", style: .default))
+        self.present(waitingDialog, animated: true)
+    }
+    
+    
     @IBAction func captureClick(_ sender: UIButton) {
         
+        print("ip=[\(ipTextField.text!)]")
         //check text not nil
         guard let ipaddress = ipTextField.text else{
             print("ip address is nil")
@@ -88,7 +102,8 @@ class ViewController: UIViewController,UITextFieldDelegate {
         imageView.image=nil
         
         //async download image
-        showCapturingDialog(yesIWantToShow: true)
+        presentWaiting4CaptureController()
+        
         let url = URL(string: "http://\(ipaddress):8080/reqimg")
         downloadImageFrom(url:url!)
     }
@@ -139,7 +154,7 @@ class ViewController: UIViewController,UITextFieldDelegate {
                         DispatchQueue.main.async {
                             self.imageView.contentMode = .scaleAspectFit
                             self.imageView.image = image
-                            self.showCapturingDialog(yesIWantToShow: false)
+                            self.dismiss(animated: false, completion: nil) //showCapturingDialog(yesIWantToShow: false)
                         }
                     }else{
                         print("error2")
